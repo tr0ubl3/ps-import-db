@@ -44,19 +44,41 @@ if($luna_anterioara -eq 0) {
 
 # adaugare ip-uri masini
 $ip_collection = New-Object System.Collections.ArrayList
-$ip_collection += "10.238.215.1"
-$ip_collection += "10.238.215.2"
+$ip_collection += "D:\working\delphi\date_capa\180.1"
+$ip_collection += "D:\working\delphi\date_capa\180.2"
 
+$incr = 1
 foreach ($ip in $ip_collection) {
-    For ($i=0; $i -le 1; $i++) {
-        # setare cale fisiere de copiat
-        $cale_sursa = "\\$ip\Result\Production\$an_anterior\$luna_anterioara"
-        # setare destinatie fisiere copiate
-        $cale_destinatie = "D:\working\delphi\ps-import-db\misc\op180lol"
-        # copiere
-        # Copy-Item -Path "misc\op180\" -Destination $cale_destinatie -Recurse -PassThru -Filter "*.txt"
-        # Remove-Item $cale_destinatie -Recurse
-        # Remove-Item "misc\copy.log"
-        robocopy $cale_sursa $cale_destinatie "*.txt" /IM /FP /NP /NS /NC /NDL /NJH /NJS /R:1 /W:1 /LOG+:misc\copy.log
+    # setare cale fisiere de copiat
+    $cale_sursa = "$ip\Result\Production\$an_anterior\$luna_anterioara"
+    $cale_destinatie = "D:\working\delphi\ps-import-db\misc\180.$incr\$an_anterior\$luna_anterioara"
+    # Copy-Item -Path "misc\op180\" -Destination $cale_destinatie -Recurse -PassThru -Filter "*.txt"
+    # Remove-Item $cale_destinatie -Recurse
+    # Remove-Item "misc\copy.log"
+    # copiere fisiere de pe luna anterioara pentru a prinde trecerea intre luni
+    robocopy $cale_sursa $cale_destinatie "*.txt" /IM /FP /NP /NS /NC /NDL /NJH /NJS /R:1 /W:1 /LOG+:misc\copy_old.log
+
+     foreach($line in Get-Content misc\copy_old.log) {
+        $datePattern = [Regex]::new('\d{4}_\d{2}_\d{2}.txt')
+        $potriviri = $datePattern.Matches($line)
+        if ($line -match '\d{4}_\d{2}_\d{2}.txt') {
+            Add-Content import.log $cale_destinatie\$potriviri
+        }
+
     }
+
+    $cale_sursa = "$ip\Result\Production\$an_curent\$luna_curenta"
+    $cale_destinatie = "D:\working\delphi\ps-import-db\misc\180.$incr\$an_curent\$luna_curenta"
+    robocopy $cale_sursa $cale_destinatie "*.txt" /IM /FP /NP /NS /NC /NDL /NJH /NJS /R:1 /W:1 /LOG+:misc\copy_current.log
+
+    foreach($line in Get-Content misc\copy_current.log) {
+        $datePattern = [Regex]::new('\d{4}_\d{2}_\d{2}.txt')
+        $potriviri = $datePattern.Matches($line)
+        if ($line -match '\d{4}_\d{2}_\d{2}.txt') {
+            Add-Content import.log $cale_destinatie\$potriviri
+        }
+
+    }
+
+    $incr++
 }
