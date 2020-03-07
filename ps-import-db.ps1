@@ -1,28 +1,11 @@
-﻿# import sqlite dll from absolute path
-add-type -Path "sqlite\x64\1.0.112.0\System.Data.SQLite.dll"
+﻿############################
+# sectiune copiere fisiere #
+############################
 
-# cale bd
-$con_str = "data source=D:\working\delphi\capabilitati\sqlite for excel\DataCapa.db3"
 
-$con_obj = New-Object -TypeName System.Data.SQLite.SQLiteConnection
-
-$con_obj.ConnectionString = $con_str
-$con_obj.Open()
-
-$n=0
-foreach($line in Get-Content D:\working\delphi\ps-import-db\misc\op180\1.txt) {
-    # write-host $n
-    if($n -eq 0){
-        # $nnn = $line.replace("`t",",")
-        $nnn = $line.split("`t")
-        write-host $nnn[0]
-    }
-    $n++
-}
-
-# sectiune copiere fisiere
 # stergere jurnal copiere
-Remove-Item "misc\copy.log"
+Remove-Item "import.log"
+Remove-Item "misc/*" -Recurse
 
 # obtinere an curent
 $an_curent = Get-Date -UFormat "%Y"
@@ -77,8 +60,58 @@ foreach ($ip in $ip_collection) {
         if ($line -match '\d{4}_\d{2}_\d{2}.txt') {
             Add-Content import.log $cale_destinatie\$potriviri
         }
-
     }
 
     $incr++
 }
+
+
+####################################
+# sectiune importare fisiere in bd #
+####################################
+
+# import sqlite dll from absolute path
+add-type -Path "sqlite\x64\1.0.112.0\System.Data.SQLite.dll"
+
+# cale bd
+$con_str = "data source=D:\working\delphi\capabilitati\sqlite for excel\db\DataCapa.db3"
+$con_obj = New-Object -TypeName System.Data.SQLite.SQLiteConnection
+$con_obj.ConnectionString = $con_str
+$con_obj.Open()
+
+
+# citire fisiere si importare continut in bd
+$n=0
+
+foreach($cale_fisier in Get-Content import.log) {
+        # write-host $n
+        # $nnn = $line.replace("`t",",")
+        #$nnn = $line.split("`t")
+        $hash = (Get-FileHash -Path $cale_fisier -Algorithm SHA1).hash
+        $dataset.Clear()
+        # verifica daca fisierul exista
+        if (Test-Path -Path $cale_fisier -PathType Leaf) {
+            $sql_adapter = New-Object -TypeName System.Data.SQLite.SQLiteDataAdapter $select
+            $dataset = New-Object -TypeName System.Data.DataSet
+            [void]$sql_adapter.Fill($dataset)
+            $select = $con_obj.CreateCommand()
+            $select.CommandText = $sql_cmd_txt
+
+            # verifica daca fisierul importat are acelasi hash
+            $sql_cmd_txt = "select count(checksum) from fisiere_importate where checksum = '$cale_fisier'"
+            $fisier_bool = $dataset.Tables.rows.'count(checksum)'
+            # Write-Host $fisier_bool.count
+            if ($fisier_bool -eq 1) {
+                Write-Host $n
+            }
+            # daca fisierul importat are hash diferit atunci verifica ultima linie importata si continua de acolo importarea
+
+            # daca fisierul nu a mai fost importat 
+        }
+
+    $n++
+}
+
+$con_obj.Close()
+
+write-host $hash
