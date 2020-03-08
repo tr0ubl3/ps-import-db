@@ -31,6 +31,9 @@ $ip_collection += "D:\working\delphi\date_capa\180.1"
 $ip_collection += "D:\working\delphi\date_capa\180.2"
 
 $incr = 1
+
+$datePattern = [Regex]::new('\d{4}_\d{2}_\d{2}.txt')
+
 foreach ($ip in $ip_collection) {
     # setare cale fisiere de copiat
     $cale_sursa = "$ip\Result\Production\$an_anterior\$luna_anterioara"
@@ -40,27 +43,28 @@ foreach ($ip in $ip_collection) {
     # Remove-Item "misc\copy.log"
     # copiere fisiere de pe luna anterioara pentru a prinde trecerea intre luni
     robocopy $cale_sursa $cale_destinatie "*.txt" /IM /FP /NP /NS /NC /NDL /NJH /NJS /R:1 /W:1 /LOG+:misc\copy_old.log
-
-     foreach($line in Get-Content misc\copy_old.log) {
-        $datePattern = [Regex]::new('\d{4}_\d{2}_\d{2}.txt')
+    
+    foreach($line in Get-Content misc\copy_old.log) {
         $potriviri = $datePattern.Matches($line)
-        if ($line -match '\d{4}_\d{2}_\d{2}.txt') {
+        if ($potriviri.Count -eq 1) {
             Add-Content import.log $cale_destinatie\$potriviri
         }
-
     }
+
+    Remove-Item ".\misc\copy_old.log"
 
     $cale_sursa = "$ip\Result\Production\$an_curent\$luna_curenta"
     $cale_destinatie = "D:\working\delphi\ps-import-db\misc\180.$incr\$an_curent\$luna_curenta"
     robocopy $cale_sursa $cale_destinatie "*.txt" /IM /FP /NP /NS /NC /NDL /NJH /NJS /R:1 /W:1 /LOG+:misc\copy_current.log
 
     foreach($line in Get-Content misc\copy_current.log) {
-        $datePattern = [Regex]::new('\d{4}_\d{2}_\d{2}.txt')
+        # $datePattern = [Regex]::new('\d{4}_\d{2}_\d{2}.txt')
         $potriviri = $datePattern.Matches($line)
-        if ($line -match '\d{4}_\d{2}_\d{2}.txt') {
+        if ($potriviri.Count -eq 1) {
             Add-Content import.log $cale_destinatie\$potriviri
         }
     }
+    Remove-Item ".\misc\copy_current.log"
 
     $incr++
 }
@@ -77,41 +81,44 @@ add-type -Path "sqlite\x64\1.0.112.0\System.Data.SQLite.dll"
 $con_str = "data source=D:\working\delphi\capabilitati\sqlite for excel\db\DataCapa.db3"
 $con_obj = New-Object -TypeName System.Data.SQLite.SQLiteConnection
 $con_obj.ConnectionString = $con_str
-$con_obj.Open()
-
+$dataset = New-Object -TypeName System.Data.DataSet
+$select = $con_obj.CreateCommand()
 
 # citire fisiere si importare continut in bd
 $n=0
 
 foreach($cale_fisier in Get-Content import.log) {
-        # write-host $n
-        # $nnn = $line.replace("`t",",")
-        #$nnn = $line.split("`t")
-        $hash = (Get-FileHash -Path $cale_fisier -Algorithm SHA1).hash
-        $dataset.Clear()
-        # verifica daca fisierul exista
+        
+        # verifica daca fisierul exista in calea extrasa din fisier
         if (Test-Path -Path $cale_fisier -PathType Leaf) {
-            $sql_adapter = New-Object -TypeName System.Data.SQLite.SQLiteDataAdapter $select
-            $dataset = New-Object -TypeName System.Data.DataSet
-            [void]$sql_adapter.Fill($dataset)
+            # verifica daca fisierul a mai fost importat dupa nume_fisier
+            $hash = (Get-FileHash -Path $cale_fisier -Algorithm SHA512).hash
+            $sql_cmd_txt = "select count(nume_fisier), * from fisiere_importate where nume_fisier = ""$cale_fisier"""
             $select = $con_obj.CreateCommand()
             $select.CommandText = $sql_cmd_txt
+            $sql_adapter = New-Object -TypeName System.Data.SQLite.SQLiteDataAdapter $select
 
-            # verifica daca fisierul importat are acelasi hash
-            $sql_cmd_txt = "select count(checksum) from fisiere_importate where checksum = '$cale_fisier'"
+            [void]$sql_adapter.Fill($dataset)
+
             $fisier_bool = $dataset.Tables.rows.'count(checksum)'
-            # Write-Host $fisier_bool.count
-            if ($fisier_bool -eq 1) {
-                Write-Host $n
+            # Write-Host $sql_cmd_txt $fisier_bool
+            if ($fisier_bool -eq 0) {
+                # daca fisierul importat are hash diferit atunci verifica ultima linie importata si continua de acolo importarea
+                $cale_fisier_bd = $dataset.Tables.rows.'nume_fisier'
+                if ($cale_fisier_bd -cmatch $cale_fisier) {
+                    
+                }
             }
-            # daca fisierul importat are hash diferit atunci verifica ultima linie importata si continua de acolo importarea
 
             # daca fisierul nu a mai fost importat 
-        }
-
+           
+       }
+    $sql_adapter.Dispose()
+    $dataset.Reset()
+    $select.Dispose()
+    $con_obj.Close()
+    $fisier_bool = ""
     $n++
 }
 
-$con_obj.Close()
 
-write-host $hash
