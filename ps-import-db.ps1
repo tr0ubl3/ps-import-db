@@ -9,7 +9,7 @@ $lpath = "D:\working\delphi\ps-import-db"
 Remove-Item -Path "$lpath\import.log"
 Remove-Item ".\misc/180.1" -Recurse
 Remove-Item ".\misc/180.2" -Recurse
-Remove-Item ".\misc/old" -Recurse
+Remove-Item ".\misc/old/*"
 Remove-Item ".\misc/*.log"
 
 # obtinere an curent
@@ -106,15 +106,33 @@ foreach($cale_fisier in Get-Content import.log) {
 
             [void]$sql_adapter.Fill($dataset)
 
-            $fisier_bool = $dataset.Tables.rows.'count(checksum)'
-            # Write-Host $sql_cmd_txt $fisier_bool
+            $fisier_bool = $dataset.Tables.rows.'count(nume_fisier)'
+            Write-Host $sql_cmd_txt $fisier_bool
             if ($fisier_bool -eq 0) {
                 # daca fisierul importat are hash diferit atunci verifica ultima linie importata si continua de acolo importarea
-                $cale_fisier_bd = $dataset.Tables.rows.'nume_fisier'
-                if ("$cale_fisier_bd" -cmatch "$cale_fisier") {
-                    
+                $checksum_bool = $dataset.Tables.rows.'checksum'
+                $dline = 1
+                if ($hash -ne $checksum_bool) {
+                    foreach($data_line in Get-Content $cale_fisier) {
+                        
+                        # $data_line = $data_line.Split(",")
+                        if ($dline -cgt 1) {
+                            $data_line = $data_line.Trim()
+                            # $data_line = $data_line.replace("`t",",")
+                            $data_line = $data_line.Split("`t")
+                            foreach ($param in $data_line) {
+                            
+                            }
+                            $insert = $con_obj.CreateCommand()
+                            $param_col.AddRange($data_line)
+
+                        }
+
+                        $dline++
+                        # Write-Host $data_line.Length
+                    }
                 }
-            }
+            } # de implementat else pentru importare fisiere diferite
 
             # daca fisierul nu a mai fost importat 
            
