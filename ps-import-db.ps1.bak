@@ -108,7 +108,7 @@ foreach($cale_fisier in Get-Content import.log) {
             if ($fisier_bool -eq 0) {
                 # daca fisierul importat are hash diferit atunci verifica ultima linie importata si continua de acolo importarea
                 $cale_fisier_bd = $dataset.Tables.rows.'nume_fisier'
-                if ("$cale_fisier_bd" -cmatch "$cale_fisier") {
+                if ($cale_fisier_bd -cmatch $cale_fisier) {
                     
                 }
             }
