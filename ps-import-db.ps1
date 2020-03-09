@@ -7,7 +7,10 @@ $lpath = "D:\working\delphi\ps-import-db"
 
 # stergere jurnal copiere
 Remove-Item -Path "$lpath\import.log"
-#Remove-Item "misc/*" -Recurse
+Remove-Item ".\misc/180.1" -Recurse
+Remove-Item ".\misc/180.2" -Recurse
+Remove-Item ".\misc/old" -Recurse
+Remove-Item ".\misc/*.log"
 
 # obtinere an curent
 $an_curent = Get-Date -UFormat "%Y"
@@ -39,7 +42,7 @@ $datePattern = [Regex]::new('\d{4}_\d{2}_\d{2}.txt')
 foreach ($ip in $ip_collection) {
     # setare cale fisiere de copiat
     $cale_sursa = "$ip\Result\Production\$an_anterior\$luna_anterioara"
-    $cale_destinatie = "$lpath\180.$incr\$an_anterior\$luna_anterioara"
+    $cale_destinatie = "$lpath\misc\180.$incr\$an_anterior\$luna_anterioara"
     # Copy-Item -Path "misc\op180\" -Destination $cale_destinatie -Recurse -PassThru -Filter "*.txt"
     # Remove-Item $cale_destinatie -Recurse
     # Remove-Item "misc\copy.log"
@@ -58,7 +61,7 @@ foreach ($ip in $ip_collection) {
 
     $cale_sursa = "$ip\Result\Production\$an_curent\$luna_curenta"
     $cale_destinatie = "$lpath\misc\180.$incr\$an_curent\$luna_curenta"
-    robocopy $cale_sursa $cale_destinatie "*.txt" /FP /NP /NS /NC /NDL /NJH /NJS /R:1 /W:1 /XX /LOG+:misc\copy_current.log
+    robocopy $cale_sursa $cale_destinatie "*.txt" /FP /NP /NS /NC /NDL /NJH /NJS /R:1 /W:1 /XX /LOG+:$lpath\misc\copy_current.log
 
     foreach($line in Get-Content "$lpath\misc\copy_current.log") {
         # $datePattern = [Regex]::new('\d{4}_\d{2}_\d{2}.txt')
