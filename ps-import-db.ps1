@@ -114,20 +114,30 @@ foreach($cale_fisier in Get-Content import.log) {
                 $dline = 1
                 if ($hash -ne $checksum_bool) {
                     foreach($data_line in Get-Content $cale_fisier) {
-                        
                         # $data_line = $data_line.Split(",")
                         if ($dline -cgt 1) {
                             $data_line = $data_line.Trim()
                             # $data_line = $data_line.replace("`t",",")
-                            $data_line = $data_line.Split("`t")
-                            foreach ($param in $data_line) {
-                            
-                            }
+                            $con_obj.Open()
                             $insert = $con_obj.CreateCommand()
-                            $param_col.AddRange($data_line)
+                            $data_line = $data_line.Split("`t")
+                            $iterator = 0
+                            foreach($param in Get-Content "$lpath\misc\coloane_tabele\sonplas180.txt") {
+                               $insert.Parameters.AddWithValue($param, $data_line[$iterator])
+                               $coloane += $param.Replace("@", "")
+                               $valori += $param
+                               $iterator++
+                            }
+                            $insert.Parameters.AddWithValue("@time_stamp", "DATETIME DEFAULT CURRENT_TIMESTAMP")
+                            $insert.CommandText = "insert into sonplas180 ($coloane) values ($valori)"
+                            $insert.ExecuteNonQuery()
+
+                            pause
+                            #
+                            #$param_col.AddRange($data_line)
 
                         }
-
+                        $insert.Dispose()
                         $dline++
                         # Write-Host $data_line.Length
                     }
