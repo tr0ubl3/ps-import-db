@@ -107,35 +107,34 @@ foreach($cale_fisier in Get-Content import.log) {
             [void]$sql_adapter.Fill($dataset)
 
             $fisier_bool = $dataset.Tables.rows.'count(nume_fisier)'
-            Write-Host $sql_cmd_txt $fisier_bool
+            # Write-Host $sql_cmd_txt $fisier_bool
             if ($fisier_bool -eq 0) {
                 # daca fisierul importat are hash diferit atunci verifica ultima linie importata si continua de acolo importarea
                 $checksum_bool = $dataset.Tables.rows.'checksum'
                 $dline = 1
                 if ($hash -ne $checksum_bool) {
+                    $con_obj.Open()
                     foreach($data_line in Get-Content $cale_fisier) {
                         # $data_line = $data_line.Split(",")
                         if ($dline -cgt 1) {
                             $data_line = $data_line.Trim()
                             # $data_line = $data_line.replace("`t",",")
-                            $con_obj.Open()
+                            
                             $insert = $con_obj.CreateCommand()
                             $data_line = $data_line.Split("`t")
+                            [string]$valori = $null
+                            $valori =  $data_line -join "','"
                             $iterator = 0
+                            $coloane = New-Object System.Collections.ArrayList
                             foreach($param in Get-Content "$lpath\misc\coloane_tabele\sonplas180.txt") {
-                               $insert.Parameters.AddWithValue($param, $data_line[$iterator])
-                               $coloane += $param.Replace("@", "")
-                               $valori += $param
+                               $coloane += $param
                                $iterator++
                             }
-                            $insert.Parameters.AddWithValue("@time_stamp", "DATETIME DEFAULT CURRENT_TIMESTAMP")
-                            $insert.CommandText = "insert into sonplas180 ($coloane) values ($valori)"
-                            $insert.ExecuteNonQuery()
-
-                            pause
-                            #
-                            #$param_col.AddRange($data_line)
-
+                            $coloane = $coloane -join ','
+                            $insert.CommandText = "insert into sonplas180 ($coloane) values ('$valori')"
+                            $insert.ExecuteNonQuery() | Out-Null
+                            $valori = ''
+                            $coloane = ''
                         }
                         $insert.Dispose()
                         $dline++
