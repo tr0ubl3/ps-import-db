@@ -94,7 +94,6 @@ $select = $con_obj.CreateCommand()
 $n=0
 
 # setare variabile
-
 $iterator = 0
 $coloane = New-Object System.Collections.ArrayList
 foreach($param in Get-Content "$lpath\misc\coloane_tabele\sonplas180.txt") {
@@ -133,11 +132,14 @@ foreach($cale_fisier in Get-Content import.log) {
                             # $data_line = $data_line.replace("`t",",")
                             $insert = $con_obj.CreateCommand()
                             $data_line = $data_line.Split("`t")
-                            [string]$valori = $null
-                            $valori =  $data_line -join "','"
-                            $insert.CommandText = "insert into sonplas180 ($coloane) values ('$valori')"
-                            $insert.ExecuteNonQuery() | Out-Null
-                            $valori = ''
+                            # verificare numar valori de importat pentru validitate linie
+                            if ($data_line.Count -eq 71) {
+                                [string]$valori = $null
+                                $valori =  $data_line -join "','"
+                                $insert.CommandText = "insert into sonplas180 ($coloane) values ('$valori')"
+                                $insert.ExecuteNonQuery() | Out-Null
+                                $valori = ''
+                            }
                         }
                         $insert.Dispose()
                         $dline++
