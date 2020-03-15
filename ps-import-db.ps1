@@ -144,6 +144,7 @@ foreach($cale_fisier in Get-Content import.log) {
                             # verificare numar valori de importat pentru validitate linie
                             if ($data_line.Count -eq 71) {
                                 [string]$valori = $null
+                                $data_line[0] = [datetime]::parseexact($data_line[0], 'dd/MM/yyyy', $null).tostring("yyyy-MM-dd")
                                 $valori =  $data_line -join "','"
                                 $insert.CommandText = "insert into sonplas180 ($coloane) values ('$valori')"
                                 $insert.ExecuteNonQuery() | Out-Null
@@ -170,6 +171,7 @@ foreach($cale_fisier in Get-Content import.log) {
                             # verificare numar valori de importat pentru validitate linie
                             if ($data_line.Count -eq 71) {
                                 [string]$valori = $null
+                                $data_line[0] = [datetime]::parseexact($data_line[0], 'dd/MM/yyyy', $null).tostring("yyyy-MM-dd")
                                 $valori =  $data_line -join "','"
                                 $insert.CommandText = "insert into sonplas180 ($coloane) values ('$valori')"
                                 $insert.ExecuteNonQuery() | Out-Null
@@ -195,5 +197,6 @@ foreach($cale_fisier in Get-Content import.log) {
     $select.Dispose()
     $fisier_bool = ""
     $n++
+    $data_line = ""
 }
 $con_obj.Close()
