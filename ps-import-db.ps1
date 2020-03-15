@@ -93,6 +93,18 @@ $select = $con_obj.CreateCommand()
 # citire fisiere si importare continut in bd
 $n=0
 
+# setare variabile
+
+$iterator = 0
+$coloane = New-Object System.Collections.ArrayList
+foreach($param in Get-Content "$lpath\misc\coloane_tabele\sonplas180.txt") {
+    $coloane += $param
+    $iterator++
+}
+$coloane = $coloane -join ','
+
+
+
 foreach($cale_fisier in Get-Content import.log) {
         
         # verifica daca fisierul exista in calea extrasa din fisier
@@ -119,22 +131,13 @@ foreach($cale_fisier in Get-Content import.log) {
                         if ($dline -cgt 1) {
                             $data_line = $data_line.Trim()
                             # $data_line = $data_line.replace("`t",",")
-                            
                             $insert = $con_obj.CreateCommand()
                             $data_line = $data_line.Split("`t")
                             [string]$valori = $null
                             $valori =  $data_line -join "','"
-                            $iterator = 0
-                            $coloane = New-Object System.Collections.ArrayList
-                            foreach($param in Get-Content "$lpath\misc\coloane_tabele\sonplas180.txt") {
-                               $coloane += $param
-                               $iterator++
-                            }
-                            $coloane = $coloane -join ','
                             $insert.CommandText = "insert into sonplas180 ($coloane) values ('$valori')"
                             $insert.ExecuteNonQuery() | Out-Null
                             $valori = ''
-                            $coloane = ''
                         }
                         $insert.Dispose()
                         $dline++
