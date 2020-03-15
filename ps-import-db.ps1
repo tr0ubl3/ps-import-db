@@ -89,7 +89,7 @@ $con_obj = New-Object -TypeName System.Data.SQLite.SQLiteConnection
 $con_obj.ConnectionString = $con_str
 $dataset = New-Object -TypeName System.Data.DataSet
 $select = $con_obj.CreateCommand()
-
+$con_obj.Open()
 # citire fisiere si importare continut in bd
 $n=0
 
@@ -119,12 +119,12 @@ foreach($cale_fisier in Get-Content import.log) {
 
             $fisier_bool = $dataset.Tables.rows.'count(nume_fisier)'
             # Write-Host $sql_cmd_txt $fisier_bool
+            # verificare daca un fisier cu acelasi nume a fost importat
             if ($fisier_bool -eq 0) {
-                # daca fisierul importat are hash diferit atunci verifica ultima linie importata si continua de acolo importarea
                 $checksum_bool = $dataset.Tables.rows.'checksum'
                 $dline = 1
+                # daca fisierul importat are hash diferit atunci verifica ultima linie importata si continua de acolo importarea
                 if ($hash -ne $checksum_bool) {
-                    $con_obj.Open()
                     foreach($data_line in Get-Content $cale_fisier) {
                         # $data_line = $data_line.Split(",")
                         if ($dline -cgt 1) {
@@ -146,7 +146,9 @@ foreach($cale_fisier in Get-Content import.log) {
                         # Write-Host $data_line.Length
                     }
                 }
-            } # de implementat else pentru importare fisiere diferite
+            } else {
+                
+            }# de implementat else pentru importare fisiere diferite
 
             # daca fisierul nu a mai fost importat 
            
@@ -154,7 +156,7 @@ foreach($cale_fisier in Get-Content import.log) {
     $sql_adapter.Dispose()
     $dataset.Reset()
     $select.Dispose()
-    $con_obj.Close()
     $fisier_bool = ""
     $n++
 }
+$con_obj.Close()
