@@ -94,13 +94,20 @@ $con_obj.Open()
 $n=0
 
 # setare variabile
-$iterator = 0
 $coloane = New-Object System.Collections.ArrayList
 foreach($param in Get-Content "$lpath\misc\coloane_tabele\sonplas180.txt") {
     $coloane += $param
     $iterator++
 }
 $coloane = $coloane -join ','
+
+$iterator = 0
+$coloane_fisiere_importate = New-Object System.Collections.ArrayList
+foreach($param_fisiere in Get-Content "$lpath\misc\coloane_tabele\fisiere_importate.txt") {
+    $coloane_fisiere_importate += $param_fisiere
+    $iterator++
+}
+$coloane_fisiere_importate = $coloane_fisiere_importate -join ','
 
 
 
@@ -145,6 +152,11 @@ foreach($cale_fisier in Get-Content import.log) {
                         $dline++
                         # Write-Host $data_line.Length
                     }
+                    # adaugare cale fisier curent in baza de date
+                    $insert_file = $con_obj.CreateCommand()
+                    $insert_file.CommandText = "insert into fisiere_importate ($coloane_fisiere_importate) values ('$cale_fisier', '$hash', '$dline')"
+                    $insert_file.ExecuteNonQuery() | Out-Null
+                    $insert_file.Dispose()
                 }
             } else {
                 
