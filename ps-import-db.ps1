@@ -7,8 +7,8 @@ $lpath = "D:\working\delphi\ps-import-db"
 
 # stergere jurnal copiere
 Remove-Item -Path "$lpath\import.log"
-Remove-Item ".\misc/180.1" -Recurse
-Remove-Item ".\misc/180.2" -Recurse
+Remove-Item ".\misc/180.1" -Recurse -Force
+Remove-Item ".\misc/180.2" -Recurse -Force
 Remove-Item ".\misc/old/*"
 Remove-Item ".\misc/*.log"
 
@@ -34,6 +34,7 @@ if($luna_anterioara -eq 0) {
 $ip_collection = New-Object System.Collections.ArrayList
 $ip_collection += "D:\working\delphi\date_capa\180.1"
 $ip_collection += "D:\working\delphi\date_capa\180.2"
+$ip_collection += "D:\working\delphi\date_capa\180.3"
 
 $incr = 1
 
@@ -117,7 +118,7 @@ foreach($cale_fisier in Get-Content import.log) {
         if (Test-Path -Path $cale_fisier -PathType Leaf) {
             # verifica daca fisierul a mai fost importat dupa nume_fisier
             $hash = (Get-FileHash -Path $cale_fisier -Algorithm SHA512).hash
-            $sql_cmd_txt = "select count(nume_fisier), * from fisiere_importate where nume_fisier = ""$cale_fisier"""
+            $sql_cmd_txt = "select rowid, count(nume_fisier), * from fisiere_importate where nume_fisier = ""$cale_fisier"""
             $select = $con_obj.CreateCommand()
             $select.CommandText = $sql_cmd_txt
             $sql_adapter = New-Object -TypeName System.Data.SQLite.SQLiteDataAdapter $select
@@ -125,13 +126,14 @@ foreach($cale_fisier in Get-Content import.log) {
             [void]$sql_adapter.Fill($dataset)
 
             $fisier_bool = $dataset.Tables.rows.'count(nume_fisier)'
+            $checksum_bool = $dataset.Tables.rows.'checksum'
+            $linii_importate = $dataset.Tables.rows.'linii_importate'
+            $rowid = $dataset.Tables.rows.('rowid')
             # Write-Host $sql_cmd_txt $fisier_bool
             # verificare daca un fisier cu acelasi nume a fost importat
             if ($fisier_bool -eq 0) {
-                $checksum_bool = $dataset.Tables.rows.'checksum'
                 $dline = 1
                 # daca fisierul importat are hash diferit atunci verifica ultima linie importata si continua de acolo importarea
-                if ($hash -ne $checksum_bool) {
                     foreach($data_line in Get-Content $cale_fisier) {
                         # $data_line = $data_line.Split(",")
                         if ($dline -cgt 1) {
@@ -157,13 +159,36 @@ foreach($cale_fisier in Get-Content import.log) {
                     $insert_file.CommandText = "insert into fisiere_importate ($coloane_fisiere_importate) values ('$cale_fisier', '$hash', '$dline')"
                     $insert_file.ExecuteNonQuery() | Out-Null
                     $insert_file.Dispose()
-                }
             } else {
-                
-            }# de implementat else pentru importare fisiere diferite
+                # daca fisierul a mai fost importat verifica daca are acelasi hash
+                if ($hash -cne $checksum_bool) {
+                    foreach($data_line in Get-Content $cale_fisier) {
+                        if ($dline -cge $linii_importate) {
+                            $data_line = $data_line.Trim()
+                            $insert = $con_obj.CreateCommand()
+                            $data_line = $data_line.Split("`t")
+                            # verificare numar valori de importat pentru validitate linie
+                            if ($data_line.Count -eq 71) {
+                                [string]$valori = $null
+                                $valori =  $data_line -join "','"
+                                $insert.CommandText = "insert into sonplas180 ($coloane) values ('$valori')"
+                                $insert.ExecuteNonQuery() | Out-Null
+                                $valori = ''
+                            }
+                        }
+                        $insert.Dispose()
+                        $dline++
+                        # Write-Host $data_line.Length
+                    }
+                    # adaugare cale fisier curent in baza de date
+                    $insert_file = $con_obj.CreateCommand()
+                    $insert_file.CommandText = "update fisiere_importate set checksum = '$hash', linii_importate = '$dline' where rowid = '$rowid'"
+                    $insert_file.ExecuteNonQuery() | Out-Null
+                    $insert_file.Dispose()
+                }
 
+            }
             # daca fisierul nu a mai fost importat 
-           
        }
     $sql_adapter.Dispose()
     $dataset.Reset()
