@@ -1,3 +1,0 @@
-"nume_fisier"
-"checksum"
-"linii_importate"

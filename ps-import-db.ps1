@@ -6,11 +6,8 @@
 $lpath = "D:\working\delphi\ps-import-db"
 
 # stergere jurnal copiere
-Remove-Item -Path "$lpath\import.log"
-Remove-Item ".\misc/180.1" -Recurse -Force
-Remove-Item ".\misc/180.2" -Recurse -Force
-Remove-Item ".\misc/old/*"
-Remove-Item ".\misc/*.log"
+Remove-Item -Path "$lpath\import.log" -Force
+Remove-Item "$lpath\misc\date\*" -Recurse
 
 # obtinere an curent
 $an_curent = Get-Date -UFormat "%Y"
@@ -42,8 +39,8 @@ $datePattern = [Regex]::new('\d{4}_\d{2}_\d{2}.txt')
 
 foreach ($ip in $ip_collection) {
     # setare cale fisiere de copiat
-    $cale_sursa = "$ip\Result\Production\$an_anterior\$luna_anterioara"
-    $cale_destinatie = "$lpath\misc\180.$incr\$an_anterior\$luna_anterioara"
+    $cale_sursa = "$ip\DataCenter\Result\Production\$an_anterior\$luna_anterioara"
+    $cale_destinatie = "$lpath\misc\date\180.$incr\$an_anterior\$luna_anterioara"
     # Copy-Item -Path "misc\op180\" -Destination $cale_destinatie -Recurse -PassThru -Filter "*.txt"
     # Remove-Item $cale_destinatie -Recurse
     # Remove-Item "misc\copy.log"
@@ -58,10 +55,10 @@ foreach ($ip in $ip_collection) {
     }
 
     #Remove-Item ".\misc\copy_old.log"
-	Move-Item "$lpath\misc\copy_old.log" "$lpath\misc\old\copy_old_$(get-date -f HHmmssms)_$incr.log"
+    Move-Item "$lpath\misc\copy_old.log" "$lpath\misc\old\copy_old_$(get-date -f HHmmssmsms)_$incr.log" -Force
 
-    $cale_sursa = "$ip\Result\Production\$an_curent\$luna_curenta"
-    $cale_destinatie = "$lpath\misc\180.$incr\$an_curent\$luna_curenta"
+    $cale_sursa = "$ip\DataCenter\Result\Production\$an_curent\$luna_curenta"
+    $cale_destinatie = "$lpath\misc\date\180.$incr\$an_curent\$luna_curenta"
     robocopy $cale_sursa $cale_destinatie "*.txt" /FP /NP /NS /NC /NDL /NJH /NJS /R:1 /W:1 /XX /LOG+:$lpath\misc\copy_current.log
 
     foreach($line in Get-Content "$lpath\misc\copy_current.log") {
@@ -71,8 +68,8 @@ foreach ($ip in $ip_collection) {
             Add-Content "$lpath\import.log" $cale_destinatie\$potriviri
         }
     }
-    # Remove-Item ".\misc\copy_current.log"
-	Move-Item "$lpath\misc\copy_current.log" "$lpath\misc\old\copy_current_$(get-date -f HHmmssms)_$incr.log"
+    #Remove-Item ".\misc\copy_current.log"
+    Move-Item "$lpath\misc\copy_current.log" "$lpath\misc\old\copy_current_$(get-date -f HHmmssmsms)_$incr.log" -Force
     $incr++
 }
 
@@ -85,7 +82,7 @@ foreach ($ip in $ip_collection) {
 add-type -Path "$lpath\sqlite\x64\1.0.112.0\System.Data.SQLite.dll"
 
 # cale bd
-$con_str = "data source=D:\working\delphi\capabilitati\sqlite for excel\db\DataCapa.db3"
+$con_str = "data source=C:\Users\qzcd5g\Desktop\sqlite for excel\db\DataCapa.db3"
 $con_obj = New-Object -TypeName System.Data.SQLite.SQLiteConnection
 $con_obj.ConnectionString = $con_str
 $dataset = New-Object -TypeName System.Data.DataSet
@@ -110,9 +107,7 @@ foreach($param_fisiere in Get-Content "$lpath\misc\coloane_tabele\fisiere_import
 }
 $coloane_fisiere_importate = $coloane_fisiere_importate -join ','
 
-
-
-foreach($cale_fisier in Get-Content import.log) {
+foreach($cale_fisier in Get-Content $lpath\import.log) {
         
         # verifica daca fisierul exista in calea extrasa din fisier
         if (Test-Path -Path $cale_fisier -PathType Leaf) {
@@ -144,14 +139,23 @@ foreach($cale_fisier in Get-Content import.log) {
                             # verificare numar valori de importat pentru validitate linie
                             if ($data_line.Count -eq 71) {
                                 [string]$valori = $null
-                                $data_line[0] = [datetime]::parseexact($data_line[0], 'dd/MM/yyyy', $null).tostring("yyyy-MM-dd")
+
+                                $dataExtras = $datePattern.Matches($cale_fisier)
+                                if ($dataExtras.Count -eq 1) {
+                                    $date_file = "$dataExtras[0]".Split("_")
+                                    $date_file[2] = $date_file[2].Substring(0,2)
+                                    [array]::Reverse($date_file)
+                                    $date_file = $date_file -join "."
+                                }
+                                $data_line[0] = $date_file + " " + $data_line[1]
+                                $data_line[0] = [datetime]::parseexact($date_file, 'dd.MM.yyyy', $null).tostring("yyyy-MM-dd")  + " " + $data_line[1]
                                 $valori =  $data_line -join "','"
                                 $insert.CommandText = "insert into sonplas180 ($coloane) values ('$valori')"
                                 $insert.ExecuteNonQuery() | Out-Null
                                 $valori = ''
+                                $insert.Dispose()
                             }
                         }
-                        $insert.Dispose()
                         $dline++
                         # Write-Host $data_line.Length
                     }
@@ -171,14 +175,22 @@ foreach($cale_fisier in Get-Content import.log) {
                             # verificare numar valori de importat pentru validitate linie
                             if ($data_line.Count -eq 71) {
                                 [string]$valori = $null
-                                $data_line[0] = [datetime]::parseexact($data_line[0], 'dd/MM/yyyy', $null).tostring("yyyy-MM-dd")
+                                $dataExtras = $datePattern.Matches($cale_fisier)
+                                if ($dataExtras.Count -eq 1) {
+                                    $date_file = "$dataExtras[0]".Split("_")
+                                    $date_file[2] = $date_file[2].Substring(0,2)
+                                    [array]::Reverse($date_file)
+                                    $date_file = $date_file -join "."
+                                }
+                                # $data_line[0] = $date_file + " " + $data_line[1]
+                                $data_line[0] = [datetime]::parseexact($data_line[0], 'dd/MM/yyyy', $null).tostring("yyyy-MM-dd") + " " + $data_line[1]
                                 $valori =  $data_line -join "','"
                                 $insert.CommandText = "insert into sonplas180 ($coloane) values ('$valori')"
                                 $insert.ExecuteNonQuery() | Out-Null
                                 $valori = ''
+                                $insert.Dispose()
                             }
                         }
-                        $insert.Dispose()
                         $dline++
                         # Write-Host $data_line.Length
                     }
@@ -188,9 +200,8 @@ foreach($cale_fisier in Get-Content import.log) {
                     $insert_file.ExecuteNonQuery() | Out-Null
                     $insert_file.Dispose()
                 }
-
             }
-            # daca fisierul nu a mai fost importat 
+            # daca fisierul nu a mai fost importat
        }
     $sql_adapter.Dispose()
     $dataset.Reset()
