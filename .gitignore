@@ -14,6 +14,7 @@ $RECYCLE.BIN/
 *.msi
 *.msm
 *.msp
+*.bak
 
 # Windows shortcuts
 *.lnk
@@ -23,3 +24,4 @@ $RECYCLE.BIN/
 # =========================
 misc/*
 import.log
+!misc/coloane_tabele
