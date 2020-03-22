@@ -7,7 +7,7 @@ $lpath = "D:\working\delphi\ps-import-db"
 
 # stergere jurnal copiere
 Remove-Item -Path "$lpath\import.log" -Force
-Remove-Item "$lpath\misc\date\*" -Recurse
+Remove-Item "$lpath\misc\date\*" -Recurse -for
 
 # obtinere an curent
 $an_curent = Get-Date -UFormat "%Y"
@@ -82,7 +82,7 @@ foreach ($ip in $ip_collection) {
 add-type -Path "$lpath\sqlite\x64\1.0.112.0\System.Data.SQLite.dll"
 
 # cale bd
-$con_str = "data source=C:\Users\qzcd5g\Desktop\sqlite for excel\db\DataCapa.db3"
+$con_str = "data source=D:\working\delphi\capabilitati\sqlite for excel\db\DataCapa.db3"
 $con_obj = New-Object -TypeName System.Data.SQLite.SQLiteConnection
 $con_obj.ConnectionString = $con_str
 $dataset = New-Object -TypeName System.Data.DataSet
@@ -127,6 +127,7 @@ foreach($cale_fisier in Get-Content $lpath\import.log) {
             # Write-Host $sql_cmd_txt $fisier_bool
             # verificare daca un fisier cu acelasi nume a fost importat
             if ($fisier_bool -eq 0) {
+                $sqlite_transaction = $con_obj.BeginTransaction()
                 $dline = 1
                 # daca fisierul importat are hash diferit atunci verifica ultima linie importata si continua de acolo importarea
                     foreach($data_line in Get-Content $cale_fisier) {
@@ -160,13 +161,16 @@ foreach($cale_fisier in Get-Content $lpath\import.log) {
                         # Write-Host $data_line.Length
                     }
                     # adaugare cale fisier curent in baza de date
+                    $sqlite_transaction.Commit()
                     $insert_file = $con_obj.CreateCommand()
                     $insert_file.CommandText = "insert into fisiere_importate ($coloane_fisiere_importate) values ('$cale_fisier', '$hash', '$dline')"
                     $insert_file.ExecuteNonQuery() | Out-Null
                     $insert_file.Dispose()
+                    $sqlite_transaction.Dispose()
             } else {
                 # daca fisierul a mai fost importat verifica daca are acelasi hash
                 if ($hash -cne $checksum_bool) {
+                    $sqlite_transaction = $con_obj.BeginTransaction()
                     foreach($data_line in Get-Content $cale_fisier) {
                         if ($dline -cge $linii_importate) {
                             $data_line = $data_line.Trim()
@@ -195,10 +199,12 @@ foreach($cale_fisier in Get-Content $lpath\import.log) {
                         # Write-Host $data_line.Length
                     }
                     # adaugare cale fisier curent in baza de date
+                    $sqlite_transaction.Commit()
                     $insert_file = $con_obj.CreateCommand()
                     $insert_file.CommandText = "update fisiere_importate set checksum = '$hash', linii_importate = '$dline' where rowid = '$rowid'"
                     $insert_file.ExecuteNonQuery() | Out-Null
                     $insert_file.Dispose()
+                    $sqlite_transaction.Dispose()
                 }
             }
             # daca fisierul nu a mai fost importat
